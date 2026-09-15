@@ -1,8 +1,11 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { requireAdmin, signIn, signOut } from '@/lib/auth';
 import { signParams } from '@/lib/cloudinary';
+import { deleteProductById, upsertProduct } from '@/lib/products';
+import type { Product } from '@/lib/catalog';
 
 export async function signInAction(_previous: string, formData: FormData): Promise<string> {
   const ok = await signIn(String(formData.get('password') ?? ''));
@@ -33,4 +36,58 @@ export async function signUploadAction(): Promise<{
   const timestamp = Math.round(Date.now() / 1000);
   const folder = 'lordyeedni/products';
   return { cloudName, apiKey, timestamp, folder, signature: signParams({ timestamp, folder }, apiSecret) };
+}
+
+/** Duplicated from the storefront's copy: server actions cannot import a client module's defaults. */
+function revalidateProduct(slug: string) {
+  revalidatePath('/');
+  revalidatePath('/collection');
+  revalidatePath('/products');
+  revalidatePath(`/product/${slug}`);
+}
+
+export async function saveProductAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = formData.get('id');
+  const doc = parseProductForm(formData);
+  const savedId = await upsertProduct(doc, id ? Number(id) : undefined);
+  revalidateProduct(doc.slug);
+  redirect(`/admin/products/${savedId}?saved=1`);
+}
+
+export async function deleteProductAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await deleteProductById(Number(formData.get('id')));
+  revalidateProduct(String(formData.get('slug')));
+  redirect('/admin');
+}
+
+function parseProductForm(formData: FormData): Omit<Product, 'id'> {
+  const value = (key: string) => String(formData.get(key) ?? '').trim();
+  const slug = value('slug').toLowerCase();
+  if (!/^[a-z0-9-]+$/.test(slug)) throw new Error('A slug may only contain lowercase letters, numbers and dashes.');
+  const images = JSON.parse(value('images') || '[]') as string[];
+  if (!Array.isArray(images) || images.length === 0) throw new Error('A product needs at least one image.');
+  if (images.some((src) => !/^https:\/\/res\.cloudinary\.com\//.test(src))) {
+    throw new Error('Images must be Cloudinary URLs.');
+  }
+  const price = Number(formData.get('price'));
+  if (!Number.isFinite(price) || price < 0) throw new Error('Price must be a positive number.');
+  const badge = value('badge');
+
+  return {
+    slug,
+    name: value('name'),
+    price: Math.round(price),
+    family: value('family') as Product['family'],
+    gender: value('gender') as Product['gender'],
+    line: value('line') as Product['line'],
+    badge: badge === 'none' || !badge ? undefined : (badge as NonNullable<Product['badge']>),
+    rating: Number(formData.get('rating')) || 0,
+    reviews: Number(formData.get('reviews')) || 0,
+    featured: formData.get('featured') === 'on',
+    images,
+    blurb: value('blurb'),
+    notes: { top: value('notesTop'), heart: value('notesHeart'), base: value('notesBase') },
+  } as Omit<Product, 'id'>;
 }

@@ -42,6 +42,33 @@ export async function relatedProducts(product: Product, count = 4): Promise<Prod
   ).limit(count).toArray()) as Product[];
 }
 
+/** `ponytail:` read-then-write id minting, racy under concurrent writers.
+ * There is one operator; move to a counters collection if that stops being true. */
+async function nextId(): Promise<number> {
+  const col = await productsCollection();
+  const last = await col.find({}, { projection: { id: 1 } }).sort({ id: -1 }).limit(1).toArray();
+  return (last[0]?.id ?? 0) + 1;
+}
+
+export async function upsertProduct(doc: Omit<Product, 'id'>, id?: number): Promise<number> {
+  const col = await productsCollection();
+  const productId = id ?? (await nextId());
+  await col.updateOne(
+    { id: productId },
+    {
+      $set: { ...doc, id: productId, updatedAt: new Date() },
+      $setOnInsert: { createdAt: new Date() },
+    },
+    { upsert: true },
+  );
+  return productId;
+}
+
+export async function deleteProductById(id: number): Promise<void> {
+  const col = await productsCollection();
+  await col.deleteOne({ id });
+}
+
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Naive keyword search across name, family, line, gender and all notes. */
