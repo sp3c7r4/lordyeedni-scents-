@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --accent: #ee6c0e;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    overflow-x: hidden;
+    text-wrap: pretty;
+  }
+  ::selection {
+    @apply bg-accent text-paper;
+  }
+  /* Themed keyboard focus everywhere - never the browser default. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Small caps label used for kickers, nav and button text. */
+  .label {
+    @apply text-[11px] uppercase tracking-label;
+  }
+  /* Hover-reveal underline on quiet links. */
+  .ul-reveal {
+    @apply relative;
+  }
+  .ul-reveal::after {
+    content: '';
+    @apply absolute left-0 -bottom-1 h-px w-0 bg-accent transition-all duration-300;
+  }
+  .ul-reveal:hover::after {
+    @apply w-full;
+  }
+  /* Product card image zoom, driven by the card's hover state. */
+  .card-zoom img {
+    @apply transition-transform duration-700 ease-out;
+  }
+  .card-zoom:hover img {
+    transform: scale(1.07);
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #f4f1ed 25%, #eae6e1 37%, #f4f1ed 63%);
+    background-size: 800px 100%;
+    @apply animate-shimmer;
+  }
+}
