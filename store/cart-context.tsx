@@ -5,6 +5,9 @@ import {
   FLAT_SHIPPING, FREE_SHIPPING_OVER, PROMO_CODE, PROMO_RATE,
   priceFor, type Product, type Size,
 } from '@/lib/catalog';
+import { buildOrderMessage } from '@/lib/whatsapp';
+import { withLineTotals, type Customer, type PaymentMethod } from '@/lib/orders';
+import { placeOrder as placeOrderAction } from '@/lib/actions/orders';
 
 export interface CartLine {
   /** productId + '-' + size, unique per row. */
@@ -20,10 +23,13 @@ export interface CartLine {
   unitPrice: number;
 }
 
-export interface Order {
-  id: string;
+/** What the confirmation page needs. Persisted so a refresh keeps the receipt. */
+export interface PlacedOrder {
+  number: string;
   total: number;
   email: string;
+  /** Pre-built WhatsApp body. */
+  message: string;
 }
 
 interface CartValue {
@@ -36,24 +42,25 @@ interface CartValue {
   promoCode: string;
   promoApplied: boolean;
   promoMessage: string;
-  order: Order | null;
+  placedOrder: PlacedOrder | null;
   add: (product: Product, size: Size, qty?: number) => void;
   setQty: (key: string, delta: number) => void;
   remove: (key: string) => void;
   clear: () => void;
   applyPromo: (code: string) => boolean;
-  placeOrder: (email: string) => Order;
+  placeOrder: (customer: Customer, payment: PaymentMethod) => Promise<PlacedOrder>;
 }
 
 const CartContext = createContext<CartValue | null>(null);
 const STORAGE_KEY = 'lordyeedni.cart.v1';
+const ORDER_KEY = 'lordyeedni.order.v1';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoMessage, setPromoMessage] = useState('');
-  const [order, setOrder] = useState<Order | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
 
   /* Persist locally until a real cart service exists. */
   useEffect(() => {
@@ -65,6 +72,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setLines(stored.filter((l) => l.key && l.name && l.image && l.slug));
     } catch {
       /* ignore malformed storage */
+    }
+  }, []);
+
+  /* Restore the receipt after a refresh. */
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(ORDER_KEY);
+      if (raw) setPlacedOrder(JSON.parse(raw) as PlacedOrder);
+    } catch {
+      /* ignore */
     }
   }, []);
 
@@ -112,23 +129,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return ok;
   }, []);
 
-  /** Mock order creation. Replace with a POST to your orders endpoint. */
   const placeOrder = useCallback(
-    (email: string) => {
-      const created: Order = { id: 'LS-' + Math.floor(100000 + Math.random() * 899999), total, email };
-      setOrder(created);
+    async (customer: Customer, payment: PaymentMethod): Promise<PlacedOrder> => {
+      const snapshots = lines;
+      const input = {
+        ...customer,
+        payment,
+        promoCode: promoApplied ? promoCode : null,
+        lines: snapshots.map((l) => ({
+          productId: l.productId, slug: l.slug, name: l.name, size: l.size, qty: l.qty, unitPrice: l.unitPrice,
+        })),
+        subtotal, discount, shipping, total,
+      };
+      const { number } = await placeOrderAction(input);
+      const message = buildOrderMessage({ ...input, number, lines: withLineTotals(input.lines) });
+      const placed: PlacedOrder = { number, total, email: customer.email, message };
+
+      setPlacedOrder(placed);
+      try { window.localStorage.setItem(ORDER_KEY, JSON.stringify(placed)); } catch { /* storage blocked */ }
       setLines([]);
       setPromoApplied(false);
       setPromoCode('');
       setPromoMessage('');
-      return created;
+      return placed;
     },
-    [total],
+    [lines, subtotal, discount, shipping, total, promoApplied, promoCode],
   );
 
   const value: CartValue = {
     lines, count, subtotal, discount, shipping, total,
-    promoCode, promoApplied, promoMessage, order,
+    promoCode, promoApplied, promoMessage, placedOrder,
     add, setQty, remove, clear, applyPromo, placeOrder,
   };
 

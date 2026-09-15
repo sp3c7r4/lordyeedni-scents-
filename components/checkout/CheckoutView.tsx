@@ -6,28 +6,23 @@ import { useRouter } from 'next/navigation';
 import { isEmail, money } from '@/lib/format';
 import { useCart } from '@/store/cart-context';
 import { useUI } from '@/store/ui-context';
+import type { PaymentMethod } from '@/lib/orders';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
 import Chip from '@/components/ui/Chip';
 
-type Step = 1 | 2;
 const PAY_METHODS = ['Card', 'Bank transfer', 'Pay on delivery'];
 
 const EMPTY = {
   email: '', first: '', last: '', address: '', city: '', zip: '',
-  card: '', exp: '', cvc: '',
 };
 
-/**
- * Two-step checkout, validated client-side only.
- * Wire placeOrder() to your orders API and the card fields to Stripe Elements.
- */
 export default function CheckoutView() {
   const router = useRouter();
   const { lines, subtotal, shipping, total, placeOrder } = useCart();
   const { notify } = useUI();
-  const [step, setStep] = useState<Step>(1);
   const [pay, setPay] = useState('Card');
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState('');
@@ -36,28 +31,26 @@ export default function CheckoutView() {
 
   const shippingInvalid =
     !isEmail(form.email) || !form.first.trim() || !form.last.trim() || !form.address.trim() || !form.city.trim() || !form.zip.trim();
-  const cardInvalid = form.card.replace(/\D/g, '').length < 15 || form.exp.trim().length < 4 || form.cvc.trim().length < 3;
 
-  const toPayment = () => {
+  const submit = async () => {
     if (shippingInvalid) {
       setTouched(true);
       setError('Please complete every shipping field with a valid email.');
       return;
     }
-    setTouched(false);
+    setSubmitting(true);
     setError('');
-    setStep(2);
-  };
-
-  const submit = () => {
-    if (pay === 'Card' && cardInvalid) {
-      setTouched(true);
-      setError('Card number, expiry and CVC are needed (try 4242 4242 4242 4242).');
-      return;
+    try {
+      await placeOrder(
+        { email: form.email, first: form.first, last: form.last, address: form.address, city: form.city, zip: form.zip },
+        pay as PaymentMethod,
+      );
+      notify({ message: 'Order placed — finish on WhatsApp' });
+      router.push('/checkout/confirmation');
+    } catch {
+      setError('We could not save your order. Check your connection and try again.');
+      setSubmitting(false);
     }
-    const order = placeOrder(form.email);
-    notify({ message: 'Order ' + order.id + ' placed' });
-    router.push('/checkout/confirmation');
   };
 
   if (lines.length === 0) {
@@ -76,56 +69,27 @@ export default function CheckoutView() {
     <section className="px-5 pb-20 pt-14 lg:px-10">
       <h1 className="mb-6 font-display text-[clamp(34px,4.6vw,56px)] font-medium">Checkout</h1>
 
-      <div className="mb-9 flex flex-wrap gap-6 border-b-2 border-ink pb-4">
-        {([1, 2] as Step[]).map((n) => (
-          <button
-            key={n} type="button" onClick={() => setStep(n)}
-            className={'label pb-1.5 border-b-2 ' + (step === n ? 'border-accent text-ink' : 'border-transparent text-quiet')}
-          >
-            {n === 1 ? '01 Shipping' : '02 Payment'}
-          </button>
-        ))}
-      </div>
-
       <div className="grid items-start gap-14 lg:grid-cols-[1.5fr_1fr]">
-        <div>
-          {step === 1 ? (
-            <div className="animate-rise-up">
-              <h2 className="mb-5 font-editorial text-xl">Shipping details</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field className="sm:col-span-2" label="Email" value={form.email} onChange={set('email')} type="email" placeholder="you@example.com" invalid={touched && !isEmail(form.email)} />
-                <Field label="First name" value={form.first} onChange={set('first')} invalid={touched && !form.first.trim()} />
-                <Field label="Last name" value={form.last} onChange={set('last')} invalid={touched && !form.last.trim()} />
-                <Field className="sm:col-span-2" label="Address" value={form.address} onChange={set('address')} placeholder="Street and number" invalid={touched && !form.address.trim()} />
-                <Field label="City" value={form.city} onChange={set('city')} invalid={touched && !form.city.trim()} />
-                <Field label="Postcode" value={form.zip} onChange={set('zip')} invalid={touched && !form.zip.trim()} />
-              </div>
-              {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-              <Button variant="primary" onClick={toPayment} className="mt-7">Continue to payment</Button>
-            </div>
-          ) : (
-            <div className="animate-rise-up">
-              <h2 className="mb-5 font-editorial text-xl">Payment</h2>
-              <div className="mb-5 flex flex-wrap gap-2.5">
-                {PAY_METHODS.map((m) => (
-                  <Chip key={m} label={m} active={pay === m} onClick={() => setPay(m)} />
-                ))}
-              </div>
-              {pay === 'Card' && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field className="sm:col-span-2" label="Card number" value={form.card} onChange={set('card')} placeholder="4242 4242 4242 4242" invalid={touched && form.card.replace(/\D/g, '').length < 15} />
-                  <Field label="Expiry" value={form.exp} onChange={set('exp')} placeholder="09 / 29" invalid={touched && form.exp.trim().length < 4} />
-                  <Field label="CVC" value={form.cvc} onChange={set('cvc')} placeholder="123" invalid={touched && form.cvc.trim().length < 3} />
-                </div>
-              )}
-              <p className="mt-4 text-xs text-muted">Demo only - no card details are transmitted or stored.</p>
-              {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Button variant="primary" onClick={submit}>Place order</Button>
-                <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-              </div>
-            </div>
-          )}
+        <div className="animate-rise-up">
+          <h2 className="mb-5 font-editorial text-xl">Shipping details</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field className="sm:col-span-2" label="Email" value={form.email} onChange={set('email')} type="email" placeholder="you@example.com" invalid={touched && !isEmail(form.email)} />
+            <Field label="First name" value={form.first} onChange={set('first')} invalid={touched && !form.first.trim()} />
+            <Field label="Last name" value={form.last} onChange={set('last')} invalid={touched && !form.last.trim()} />
+            <Field className="sm:col-span-2" label="Address" value={form.address} onChange={set('address')} placeholder="Street and number" invalid={touched && !form.address.trim()} />
+            <Field label="City" value={form.city} onChange={set('city')} invalid={touched && !form.city.trim()} />
+            <Field label="Postcode" value={form.zip} onChange={set('zip')} invalid={touched && !form.zip.trim()} />
+          </div>
+
+          <h2 className="mb-5 mt-9 font-editorial text-xl">How would you like to pay?</h2>
+          <div className="mb-5 flex flex-wrap gap-2.5">
+            {PAY_METHODS.map((m) => (
+              <Chip key={m} label={m} active={pay === m} onClick={() => setPay(m)} />
+            ))}
+          </div>
+
+          {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+          <Button variant="primary" onClick={submit} disabled={submitting} className="mt-7">Place order</Button>
         </div>
 
         <aside className="border border-line p-7">
