@@ -4,6 +4,7 @@
  *
  *   npm run check-env
  */
+import { createHash } from 'node:crypto';
 import { MongoClient } from 'mongodb';
 
 const redact = (value) => String(value).replace(/\/\/[^@]*@/g, '//***@').split('\n')[0];
@@ -64,6 +65,65 @@ if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && proce
     }
   } catch (error) {
     problems.push(`Cloudinary unreachable: ${redact(error.message)}`);
+  }
+
+  /* Reading is not the capability this app needs. The admin uploads product images, and a key
+   * with a read-only role passes every check above while being unable to upload anything — the
+   * exact gap that let a broken key report "ok" here. So sign a real upload, and clean it up. */
+  const timestamp = Math.floor(Date.now() / 1000);
+  const publicId = `__healthcheck/probe-${timestamp}`;
+  const sign = (params) =>
+    createHash('sha1')
+      .update(
+        Object.keys(params)
+          .sort()
+          .map((key) => `${key}=${params[key]}`)
+          .join('&') + process.env.CLOUDINARY_API_SECRET,
+      )
+      .digest('hex');
+
+  try {
+    const toSign = { public_id: publicId, timestamp };
+    const form = new FormData();
+    /* A 1x1 PNG. Small enough to be free, real enough that Cloudinary accepts it. */
+    form.append('file', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64')], { type: 'image/png' }), 'probe.png');
+    form.append('api_key', process.env.CLOUDINARY_API_KEY);
+    form.append('timestamp', String(timestamp));
+    form.append('public_id', publicId);
+    form.append('signature', sign(toSign));
+
+    const upload = await fetch(`https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: form });
+    const uploaded = await upload.json();
+
+    if (!upload.ok) {
+      const detail = uploaded?.error?.message ?? `HTTP ${upload.status}`;
+      problems.push(`Cloudinary cannot upload, so the admin cannot add product images: ${redact(detail)}`);
+    } else {
+      console.log('cloudinary   ok   signed upload accepted');
+      /* Leave nothing behind. Deleting needs its own permission, so a failure here is reported
+       * rather than swallowed — one stray 1x1 asset is a real, findable consequence. */
+      const destroyAt = Math.floor(Date.now() / 1000);
+      const destroyParams = { public_id: publicId, timestamp: destroyAt };
+      const destroy = await fetch(`https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/destroy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          api_key: process.env.CLOUDINARY_API_KEY,
+          timestamp: String(destroyAt),
+          public_id: publicId,
+          signature: sign(destroyParams),
+        }),
+      });
+      if (destroy.ok) {
+        console.log('cloudinary   ok   probe asset deleted');
+      } else {
+        problems.push(
+          `Cloudinary could not delete the probe asset ${publicId}. Remove it by hand, or the key lacks 'delete'.`,
+        );
+      }
+    }
+  } catch (error) {
+    problems.push(`Cloudinary upload probe failed: ${redact(error.message)}`);
   }
 }
 
