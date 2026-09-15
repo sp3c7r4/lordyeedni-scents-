@@ -98,7 +98,7 @@ test('every size has a multiplier', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `node --test test/`
+Run: `node --test`
 Expected: FAIL — `Cannot find module '.../lib/catalog.ts'`.
 
 - [ ] **Step 3: Create `lib/catalog.ts`**
@@ -154,7 +154,7 @@ Point every remaining `from '@/lib/products'` import at `@/lib/catalog` when the
 In `package.json`, add to `"scripts"`:
 
 ```json
-    "test": "node --test test/",
+    "test": "node --test",
 ```
 
 - [ ] **Step 7: Run the tests and the typecheck**

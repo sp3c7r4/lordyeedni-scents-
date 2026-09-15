@@ -361,7 +361,7 @@ The project has no test setup and does not need one. The logic worth checking is
 dependency-free: the WhatsApp message builder, price/multiplier math, totals, order-number format,
 the HMAC cookie round-trip, and the Cloudinary signature.
 
-`npm test` runs `node --test test/` using Node 24's built-in runner and native TypeScript type
+`npm test` runs `node --test` using Node 24's built-in runner and native TypeScript type
 stripping. Test files are `.mjs` and import the modules under test by relative path with an explicit
 `.ts` extension (`../lib/whatsapp.ts`), so neither aliases nor a transpiler are involved. Modules
 under test must stay free of `@/` imports and of React/Next — if one stops being testable that way,
