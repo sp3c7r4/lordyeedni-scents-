@@ -317,8 +317,8 @@ brochure), and every destructive action carries explicit wording rather than an 
 `lib/catalog.ts`:
 
 ```
-MONGODB_URI=mongodb+srv://...
-MONGODB_DB=lordyeedni
+MONGODB_URI=mongodb+srv://...   # the database name lives in this path
+# MONGODB_DB=                   # optional override; blank uses the path above
 ADMIN_PASSWORD=
 ADMIN_SESSION_SECRET=          # openssl rand -hex 32
 CLOUDINARY_CLOUD_NAME=
@@ -339,10 +339,12 @@ customer to find.
 Atlas requires the deployment to be reachable — `0.0.0.0/0` on the IP allowlist for a Vercel
 deployment, or the Atlas/Vercel integration. This is a deployment instruction, not code.
 
-**Credential provisioning is a human step.** A guided script (`scripts/setup-wizard.sh`) walks
-through creating the Atlas cluster, the Cloudinary account, and the WhatsApp number, then writes
-`.env.local`. The app cannot create these accounts, and pretending otherwise wastes a debugging
-session on a missing environment variable.
+**Credential provisioning is a human step.** Creating the Atlas cluster, the Cloudinary account and
+the WhatsApp number requires a browser and a phone, so no script attempts it. What a script does
+do is prove the four credential sets afterwards, in one command, without printing any of them:
+`scripts/check-env.mjs` (Task 4) pings Mongo with a throwaway write, calls the Cloudinary admin API,
+and range-checks the WhatsApp number. A wrong credential then fails in one second instead of at the
+end of whatever task first needs it.
 
 ## Dependencies added
 
@@ -376,7 +378,7 @@ delete it → orders still render their snapshot.
 ## Build order
 
 1. **Foundation** — `mongodb` dependency, `lib/db.ts`, `lib/catalog.ts` split, collection validators,
-   `scripts/seed.mjs`, the setup wizard.
+   `scripts/seed.mjs`, `scripts/check-env.mjs`.
 
    Two seed details are easy to miss. `featured: true` goes to ids `1, 4, 7, 9` — the ids the old
    `popularProducts()` hardcoded — and `createdAt` must be **staggered descending in the order

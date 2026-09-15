@@ -43,7 +43,7 @@
 | `lib/actions/orders.ts` | create | `'use server'`. `placeOrder` with input validation |
 | `lib/actions/search.ts` | create | `'use server'`. `searchCatalogue` |
 | `scripts/seed.mjs` | create | The mock array, `$jsonSchema` validators, upsert |
-| `scripts/setup-wizard.sh` | create | Guided credential capture into `.env.local` |
+| `scripts/check-env.mjs` | create | Prove every credential in one command, without printing secrets |
 | `test/*.test.mjs` | create | `node --test` checks for the five pure modules |
 | `app/admin/(protected)/*` | create | Guarded admin pages. Route group adds no URL segment |
 | `components/admin/*` | create | `AdminNav`, `ProductForm`, `ImageUploader`, `ProductTable`, `OrdersTable` |
@@ -362,7 +362,7 @@ declare global {
 function uri(): string {
   const value = process.env.MONGODB_URI;
   if (!value) {
-    throw new Error('MONGODB_URI is not set. Run scripts/setup-wizard.sh, then restart the dev server.');
+    throw new Error('MONGODB_URI is not set. Copy .env.example to .env.local and fill it in, then restart.');
   }
   return value;
 }
@@ -372,8 +372,10 @@ function client(): Promise<MongoClient> {
   return global.__mongoClientPromise;
 }
 
+/* A blank MONGODB_DB means "use the database named in the connection string".
+ * One source of truth is better than two that can drift apart. */
 export const db = async (): Promise<Db> =>
-  (await client()).db(process.env.MONGODB_DB ?? 'lordyeedni');
+  (await client()).db(process.env.MONGODB_DB || undefined);
 
 export const productsCollection = async (): Promise<Collection<Product>> =>
   (await db()).collection<Product>('products');
@@ -433,9 +435,12 @@ export interface Order extends Omit<OrderInput, 'lines'> {
 - [ ] **Step 3: Replace `.env.example`**
 
 ```
-# Copy to .env.local and fill in. scripts/setup-wizard.sh walks through this.
+# Copy to .env.local and fill in. `npm run check-env` proves all of it.
 MONGODB_URI=
-MONGODB_DB=lordyeedni
+
+# Optional. Leave blank to use the database named in the MONGODB_URI path,
+# which is where Atlas puts it by default. Set it only to override that.
+# MONGODB_DB=
 
 # Admin. Generate the secret with: openssl rand -hex 32
 ADMIN_PASSWORD=
@@ -464,124 +469,123 @@ git commit -m "feat: cached MongoDB client, order domain types, env template"
 
 ---
 
-### Task 4: Credential setup wizard
+### Task 4: Verify credentials
 
-The app cannot create an Atlas cluster or a Cloudinary account, and a missing environment variable discovered three tasks later costs a debugging session. This task front-loads it. Follow the `wizard` skill's structure if it is available.
+The four credential sets come from accounts this app cannot create, and a wrong one fails late and quietly. This task proves them up front and leaves a re-runnable check behind, so a deploy or a second machine can confirm its environment in one command.
 
 **Files:**
-- Create: `scripts/setup-wizard.sh`
-- Modify: `.gitignore` (already ignores `.env*` — verify only)
+- Create: `scripts/check-env.mjs`
+- Modify: `package.json`
 
 **Interfaces:**
-- Consumes: nothing.
-- Produces: `.env.local` with all seven variables populated.
+- Consumes: `.env.local`.
+- Produces: nothing later tasks import. `npm run check-env` exits non-zero when a credential is missing or rejected.
 
-- [ ] **Step 1: Write the wizard**
+- [ ] **Step 1: Write the checker**
 
-```bash
-#!/usr/bin/env bash
-# Guided capture of the credentials this app cannot create for itself.
-# Writes .env.local (git-ignored). Safe to re-run: it keeps existing values as defaults.
-set -euo pipefail
+```js
+/**
+ * Proves every credential before it is needed, and prints no secrets.
+ * Node loads .env.local itself via --env-file; see the npm script.
+ *
+ *   npm run check-env
+ */
+import { MongoClient } from 'mongodb';
 
-cd "$(dirname "$0")/.."
-ENV_FILE=".env.local"
+const redact = (value) => String(value).replace(/\/\/[^@]*@/g, '//***@').split('\n')[0];
+const problems = [];
 
-say()  { printf '\n\033[1m%s\033[0m\n' "$1"; }
-note() { printf '  %s\n' "$1"; }
-have() { [ -n "${!1:-}" ]; }
+const REQUIRED = [
+  'MONGODB_URI',
+  'ADMIN_PASSWORD',
+  'ADMIN_SESSION_SECRET',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'NEXT_PUBLIC_WHATSAPP_NUMBER',
+];
 
-current() { # current KEY -> existing value, if any
-  [ -f "$ENV_FILE" ] && grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- || true
+for (const key of REQUIRED) {
+  if (!process.env[key]) problems.push(`${key} is missing from .env.local`);
 }
 
-ask() { # ask KEY "prompt" [secret]
-  local key="$1" prompt="$2" secret="${3:-}" value existing
-  existing="$(current "$key")"
-  while :; do
-    if [ -n "$secret" ]; then read -rsp "  $prompt: " value; echo; else read -rp "  $prompt: " value; fi
-    [ -z "$value" ] && [ -n "$existing" ] && value="$existing"
-    [ -n "$value" ] && break
-    note "Required - nothing entered."
-  done
-  eval "$key=\$value"
+const whatsapp = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '').replace(/\D/g, '');
+if (whatsapp && whatsapp.length < 10) {
+  problems.push('NEXT_PUBLIC_WHATSAPP_NUMBER looks too short to be an international number');
 }
 
-say "Lordyeedni Scents - credential setup"
-note "Three accounts are needed and only you can create them."
-note "Re-running is safe: pressing Enter keeps the existing value."
+if (process.env.MONGODB_URI) {
+  const client = new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
+  try {
+    await client.connect();
+    /* A blank MONGODB_DB means "use the database named in the connection string". */
+    const db = client.db(process.env.MONGODB_DB || undefined);
+    await db.command({ ping: 1 });
+    const temp = db.collection('__healthcheck');
+    await temp.insertOne({ at: new Date() });
+    await temp.drop();
+    const collections = (await db.listCollections().toArray()).map((c) => c.name);
+    console.log(`mongo        ok   ${db.databaseName} | write ok | collections: ${collections.join(', ') || '(none yet)'}`);
+  } catch (error) {
+    problems.push(`MongoDB failed: ${redact(error.message)}`);
+  } finally {
+    await client.close().catch(() => {});
+  }
+}
 
-say "1/3  MongoDB Atlas"
-note "Create a free cluster at https://cloud.mongodb.com"
-note "Then: Database Access -> add a user; Network Access -> allow 0.0.0.0/0 (or your host)"
-note "Connect -> Drivers -> copy the mongodb+srv:// connection string"
-ask MONGODB_URI "Connection string" >/dev/null
-ask MONGODB_DB "Database name [lordyeedni]"
+if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  const auth = Buffer.from(
+    `${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_API_SECRET}`,
+  ).toString('base64');
+  try {
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/resources/image?max_results=1`,
+      { headers: { Authorization: `Basic ${auth}` } },
+    );
+    if (res.ok) {
+      const body = await res.json();
+      console.log(`cloudinary   ok   ${process.env.CLOUDINARY_CLOUD_NAME} | assets: ${body.total_count ?? 0}`);
+    } else {
+      problems.push(`Cloudinary rejected the credentials (HTTP ${res.status})`);
+    }
+  } catch (error) {
+    problems.push(`Cloudinary unreachable: ${redact(error.message)}`);
+  }
+}
 
-say "2/3  Cloudinary"
-note "Sign up at https://cloudinary.com -> Dashboard shows Cloud name, API Key, API Secret"
-note "No upload preset is needed: uploads are signed by the server."
-ask CLOUDINARY_CLOUD_NAME "Cloud name"
-ask CLOUDINARY_API_KEY "API key"
-ask CLOUDINARY_API_SECRET "API secret" secret
+if (whatsapp) console.log(`whatsapp     ok   ${whatsapp.length} digits`);
 
-say "3/3  Admin + WhatsApp"
-note "This password is the only thing protecting /admin. Make it long."
-ask ADMIN_PASSWORD "Admin password" secret
-ADMIN_SESSION_SECRET="${ADMIN_SESSION_SECRET:-$(openssl rand -hex 32)}"
-note "Session secret generated."
-note "WhatsApp number: international format, digits only, no + or spaces."
-note "Example: 2348012345678"
-ask NEXT_PUBLIC_WHATSAPP_NUMBER "WhatsApp number" >/dev/null
-
-umask 077
-cat > "$ENV_FILE" <<EOF
-MONGODB_URI=$MONGODB_URI
-MONGODB_DB=${MONGODB_DB:-lordyeedni}
-ADMIN_PASSWORD=$ADMIN_PASSWORD
-ADMIN_SESSION_SECRET=$ADMIN_SESSION_SECRET
-CLOUDINARY_CLOUD_NAME=$CLOUDINARY_CLOUD_NAME
-CLOUDINARY_API_KEY=$CLOUDINARY_API_KEY
-CLOUDINARY_API_SECRET=$CLOUDINARY_API_SECRET
-NEXT_PUBLIC_WHATSAPP_NUMBER=$NEXT_PUBLIC_WHATSAPP_NUMBER
-EOF
-
-say "Written to $ENV_FILE"
-note "Next: npm run seed   (loads the existing 12 bottles into Mongo)"
+if (problems.length) {
+  console.error('\n' + problems.map((problem) => '  x ' + problem).join('\n') + '\n');
+  process.exit(1);
+}
+console.log('\nAll credentials check out.');
 ```
 
-The `>/dev/null` on `ask` calls whose value is assigned by `eval` is a shellcheck-ism; if the assignment does not reach the caller's scope in your shell, drop the redirection and read the value with `ASK_RESULT` instead. Verify by echoing after the run — Step 2 is exactly that check.
+- [ ] **Step 2: Add the npm script**
 
-- [ ] **Step 2: Make it runnable and test it**
+In `package.json`, alongside `"seed"` and `"test"`:
 
-```bash
-chmod +x scripts/setup-wizard.sh
-./scripts/setup-wizard.sh
+```json
+    "check-env": "node --env-file=.env.local scripts/check-env.mjs",
 ```
 
-Expected: the prompts appear, and `.env.local` exists afterwards. Verify without printing secrets:
+- [ ] **Step 3: Run it**
+
+Run: `npm run check-env`
+Expected: a `mongo ok …` line naming the database, a `cloudinary ok …` line, a `whatsapp ok …` line, then `All credentials check out.` and exit code 0.
+
+- [ ] **Step 4: Prove it fails loudly**
+
+Temporarily blank `CLOUDINARY_API_SECRET` in `.env.local`, run again, then restore it.
+
+Expected: `x Cloudinary rejected the credentials (HTTP 401)` and a non-zero exit code. A checker that cannot fail is worse than no checker, so this step is not optional.
+
+- [ ] **Step 5: Commit**
 
 ```bash
-grep -c . .env.local          # expect 8
-grep -o '^[A-Z_]*' .env.local # expect the 8 variable names
-```
-
-Run it a second time, pressing Enter at every prompt.
-Expected: it completes and the previously entered values survive.
-
-- [ ] **Step 3: Confirm secrets are not tracked**
-
-```bash
-git status --short
-```
-
-Expected: `.env.local` does **not** appear. If it does, add `.env*` to `.gitignore` before continuing.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add scripts/setup-wizard.sh
-git commit -m "chore: guided credential setup wizard"
+git add scripts/check-env.mjs package.json
+git commit -m "chore: verify env credentials before they are needed"
 ```
 
 ---
@@ -688,19 +692,14 @@ The staggered dates reproduce the old `newProducts()` order — that grid sorts 
  * Idempotent: re-running upserts by `id` and leaves createdAt alone.
  *
  *   node scripts/seed.mjs
+ * The connection string carries the database name, so there is no env parsing
+ * here: Node loads .env.local itself via --env-file (see the npm script).
  */
-import { readFileSync } from 'node:fs';
 import { MongoClient } from 'mongodb';
 
-const env = Object.fromEntries(
-  readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
-    .split('\n')
-    .filter((line) => line.includes('=') && !line.startsWith('#'))
-    .map((line) => [line.slice(0, line.indexOf('=')).trim(), line.slice(line.indexOf('=') + 1).trim()]),
-);
-
-const client = new MongoClient(env.MONGODB_URI);
-const db = client.db(env.MONGODB_DB || 'lordyeedni');
+const client = new MongoClient(process.env.MONGODB_URI);
+/* Blank means "use the database named in the connection string". */
+const db = client.db(process.env.MONGODB_DB || undefined);
 
 const stringArray = { bsonType: 'array', minItems: 1, items: { bsonType: 'string' } };
 
@@ -798,7 +797,7 @@ Note the `id` field: the validator requires `bsonType: 'int'`, and the driver wr
 In `package.json`:
 
 ```json
-    "seed": "node scripts/seed.mjs",
+    "seed": "node --env-file=.env.local scripts/seed.mjs",
 ```
 
 Run: `npm run seed`
@@ -810,10 +809,19 @@ Expected: twelve `updated …` lines and no duplicate-key error.
 - [ ] **Step 7: Confirm the validators reject bad data**
 
 ```bash
-node -e "import('mongodb').then(async ({MongoClient})=>{const {readFileSync}=await import('node:fs');const e=Object.fromEntries(readFileSync('.env.local','utf8').split('\n').filter(l=>l.includes('=')&&!l.startsWith('#')).map(l=>[l.slice(0,l.indexOf('=')).trim(),l.slice(l.indexOf('=')+1).trim()]));const c=new MongoClient(e.MONGODB_URI);await c.connect();const r=await c.db(e.MONGODB_DB||'lordyeedni').collection('products').insertOne({id:999,slug:'bad',name:'Bad'});console.log('ACCEPTED - validator is not active');await c.close()})"
+node --env-file=.env.local -e "
+import('mongodb').then(async ({ MongoClient }) => {
+  const client = new MongoClient(process.env.MONGODB_URI);
+  await client.connect();
+  const db = client.db(process.env.MONGODB_DB || undefined);
+  await db.collection('products').insertOne({ id: 999, slug: 'bad', name: 'Bad' });
+  console.log('ACCEPTED - the validator is not active');
+  await client.close();
+});
+"
 ```
 
-Expected: a `MongoServerError: Document failed validation` error. Anything printed as `ACCEPTED` means the collection existed without a validator — drop it and re-run the seed.
+Expected: a `MongoServerError: Document failed validation` error. Anything printed as `ACCEPTED` means the collection exists without a validator — drop it and re-run the seed.
 
 - [ ] **Step 8: Commit**
 
@@ -1586,13 +1594,13 @@ const WEEK = 60 * 60 * 24 * 7;
 
 function secret(): string {
   const value = process.env.ADMIN_SESSION_SECRET;
-  if (!value) throw new Error('ADMIN_SESSION_SECRET is not set. Run scripts/setup-wizard.sh.');
+  if (!value) throw new Error('ADMIN_SESSION_SECRET is not set. Copy .env.example to .env.local and fill it in.');
   return value;
 }
 
 export async function signIn(password: string): Promise<boolean> {
   const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) throw new Error('ADMIN_PASSWORD is not set. Run scripts/setup-wizard.sh.');
+  if (!expected) throw new Error('ADMIN_PASSWORD is not set. Copy .env.example to .env.local and fill it in.');
   if (!safeEqual(passwordDigest(password), passwordDigest(expected))) return false;
   const jar = await cookies();
   jar.set(COOKIE, sessionValue(secret()), {
@@ -1851,7 +1859,7 @@ export async function signUploadAction(): Promise<{
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error('Cloudinary is not configured. Run scripts/setup-wizard.sh.');
+    throw new Error('Cloudinary is not configured. Copy .env.example to .env.local and fill it in.');
   }
   const timestamp = Math.round(Date.now() / 1000);
   const folder = 'lordyeedni/products';
@@ -2259,7 +2267,7 @@ git commit -m "feat: read-only admin orders list"
 
 The README currently says *"UI only – no backend, no payment processing"* and has a "Where to wire your backend" section listing six unwired seams. Both are now wrong. Replace with:
 
-- **Setup:** the wizard, `npm run seed`, `npm test`, `npm run dev`, and the required env variables.
+- **Setup:** `npm run check-env`, `npm run seed`, `npm test`, `npm run dev`, and the required env variables.
 - **Routes:** add `/admin`, `/admin/login`, `/admin/orders`, `/admin/products/new`, `/admin/products/[id]`.
 - **Data:** the `products` and `orders` collections, the numeric `id` alongside `_id`, why reads project `_id` away, and the `$jsonSchema` validators.
 - **Images:** Cloudinary, `lordyeedni/products`, signed uploads, and that removing an image leaves the asset behind (spec: orphan cleanup is out of scope).
@@ -2270,7 +2278,7 @@ The README currently says *"UI only – no backend, no payment processing"* and 
 
 - [ ] **Step 2: Verify the setup instructions from scratch**
 
-Simulate a fresh machine as far as is practical: move `.env.local` aside, run the wizard, run `npm run seed`, run `npm test`, run `npm run dev`, and load `/`, `/collection`, `/product/<slug>`, `/checkout`, `/admin/login`.
+Simulate a fresh machine as far as is practical: move `.env.local` aside, run `npm run check-env`, run `npm run seed`, run `npm test`, run `npm run dev`, and load `/`, `/collection`, `/product/<slug>`, `/checkout`, `/admin/login`.
 
 Expected: every step in the README works as written, with no undocumented step. Fix the README where it does not. Then restore the original `.env.local`.
 
