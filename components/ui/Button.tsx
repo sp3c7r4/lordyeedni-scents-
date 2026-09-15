@@ -13,6 +13,7 @@ interface Props {
   type?: 'button' | 'submit';
   ariaLabel?: string;
   full?: boolean;
+  disabled?: boolean;
 }
 
 const base =
@@ -26,7 +27,7 @@ const variants: Record<Variant, string> = {
 
 /** One button, four skins. Renders as a Link when href is given. */
 export default function Button({
-  children, href, onClick, variant = 'primary', className = '', type = 'button', ariaLabel, full,
+  children, href, onClick, variant = 'primary', className = '', type = 'button', ariaLabel, full, disabled,
 }: Props) {
   const cls = base + ' ' + variants[variant] + (full ? ' w-full' : '') + ' ' + className;
   if (href) {
@@ -37,7 +38,7 @@ export default function Button({
     );
   }
   return (
-    <button type={type} onClick={onClick} className={cls} aria-label={ariaLabel}>
+    <button type={type} onClick={onClick} className={cls} aria-label={ariaLabel} disabled={disabled}>
       {children}
     </button>
   );
