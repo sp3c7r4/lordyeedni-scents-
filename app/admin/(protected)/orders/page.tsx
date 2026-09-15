@@ -1,4 +1,5 @@
 import { ordersCollection } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 import OrdersTable from '@/components/admin/OrdersTable';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,7 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: Promise<{ q?: string | string[] }>;
 }) {
+  await requireAdmin();
   const { q } = await searchParams;
   /* A repeated parameter (`?q=a&q=b`) arrives as an array; take the first value
    * rather than letting `.trim()` blow up the route. */

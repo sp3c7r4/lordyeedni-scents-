@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import ProductForm from '@/components/admin/ProductForm';
 import { getProductById } from '@/lib/products';
+import { requireAdmin } from '@/lib/auth';
 
 export default async function EditProductPage({
   params,
@@ -9,6 +10,7 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ saved?: string | string[] }>;
 }) {
+  await requireAdmin();
   const { id } = await params;
   const { saved } = await searchParams;
   const product = await getProductById(Number(id));

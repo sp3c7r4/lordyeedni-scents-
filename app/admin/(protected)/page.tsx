@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { getProducts } from '@/lib/products';
+import { requireAdmin } from '@/lib/auth';
 import ProductTable from '@/components/admin/ProductTable';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminHome() {
+  await requireAdmin();
   const products = await getProducts();
   return (
     <>
