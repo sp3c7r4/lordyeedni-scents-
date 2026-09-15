@@ -2140,7 +2140,7 @@ export default async function AdminHome() {
 }
 ```
 
-`app/admin/(protected)/products/new/page.tsx` renders `<ProductForm />`. `app/admin/(protected)/products/[id]/page.tsx` awaits `params`, loads with `getProductById`, calls `notFound()` when missing, renders `<ProductForm product={product} />` plus a `Saved.` note when `searchParams.saved` is set.
+`app/admin/(protected)/products/new/page.tsx` renders `<ProductForm />`. `app/admin/(protected)/products/[id]/page.tsx` awaits `params`, loads with `getProductById`, calls `notFound()` when missing, renders `<ProductForm product={product} />` plus a `Saved.` note when `searchParams.saved` is set. Type `searchParams` as `Promise<{ saved?: string | string[] }>` for the same reason Task 14 does: Next hands back an array for a repeated key, and a bare truthiness check must not be the only thing standing between a typed URL and a 500.
 
 - [ ] **Step 5: Verify CRUD against the running site**
 
@@ -2186,10 +2186,13 @@ export const dynamic = 'force-dynamic';
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  /* Next passes `string | string[] | undefined` for any query key, not `string`.
+   * A repeated parameter (`?q=a&q=b`) is a URL anyone can type, so it must be
+   * read defensively rather than crashing the page. */
+  searchParams: Promise<{ q?: string | string[] }>;
 }) {
   const { q } = await searchParams;
-  const query = (q ?? '').trim();
+  const query = (Array.isArray(q) ? q[0] ?? '' : q ?? '').trim();
 
   const col = await ordersCollection();
   const filter = query
