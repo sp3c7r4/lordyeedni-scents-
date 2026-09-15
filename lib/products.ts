@@ -46,7 +46,7 @@ export async function relatedProducts(product: Product, count = 4): Promise<Prod
  * There is one operator; move to a counters collection if that stops being true. */
 async function nextId(): Promise<number> {
   const col = await productsCollection();
-  const last = await col.find({}, { projection: { id: 1 } }).sort({ id: -1 }).limit(1).toArray();
+  const last = await col.find({}, { projection: { id: 1, _id: 0 } }).sort({ id: -1 }).limit(1).toArray();
   return (last[0]?.id ?? 0) + 1;
 }
 

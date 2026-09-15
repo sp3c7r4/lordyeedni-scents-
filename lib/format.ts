@@ -1,5 +1,5 @@
-/** Money formatter. Whole dollars only, to match the price list. */
-export const money = (value: number) => '$' + Math.round(value);
+/** Money formatter. Whole Naira only, to match the price list. */
+export const money = (value: number) => '\u20A6' + Math.round(value);
 
 /** Five-character star string for a 0-5 rating. */
 export const stars = (rating: number) => {

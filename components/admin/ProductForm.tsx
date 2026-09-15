@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useActionState, useState } from 'react';
 import Field from '@/components/ui/Field';
 import ImageUploader from '@/components/admin/ImageUploader';
 import { FAMILIES, GENDERS } from '@/lib/catalog';
@@ -42,9 +42,12 @@ function SelectField({
 }
 
 export default function ProductForm({ product }: { product?: Product }) {
+  const [saveError, saveAction] = useActionState(saveProductAction, '');
   const [name, setName] = useState(product?.name ?? '');
   const [slug, setSlug] = useState(product?.slug ?? '');
-  const [slugTouched, setSlugTouched] = useState(false);
+  /* On the edit page the stored slug must be shown and submitted as-is; only a
+   * brand-new product derives its slug from the name. */
+  const [slugTouched, setSlugTouched] = useState(Boolean(product));
   const [price, setPrice] = useState(product ? String(product.price) : '');
   const [family, setFamily] = useState<string>(product?.family ?? 'Woody');
   const [gender, setGender] = useState<string>(product?.gender ?? 'Unisex');
@@ -63,7 +66,7 @@ export default function ProductForm({ product }: { product?: Product }) {
   const slugWarned = product ? displaySlug !== product.slug : false;
 
   return (
-    <form action={saveProductAction} className="grid gap-6">
+    <form action={saveAction} className="grid gap-6">
       <input type="hidden" name="id" value={product?.id ?? ''} />
       <Field label="Name" name="name" value={name} onChange={setName} />
       <Field
@@ -76,7 +79,7 @@ export default function ProductForm({ product }: { product?: Product }) {
         }}
       />
       <div className="grid gap-6 md:grid-cols-2">
-        <Field label="Price (USD)" name="price" type="number" value={price} onChange={setPrice} />
+        <Field label="Price (₦)" name="price" type="number" value={price} onChange={setPrice} />
         <Field label="Rating" name="rating" type="number" value={rating} onChange={setRating} />
       </div>
       <div className="grid gap-6 md:grid-cols-2">
@@ -114,6 +117,9 @@ export default function ProductForm({ product }: { product?: Product }) {
         <p className="border border-danger bg-paper px-4 py-3 text-sm text-danger">
           Changing the slug breaks any existing link to this bottle. There is no redirect.
         </p>
+      )}
+      {saveError && (
+        <p className="border border-danger bg-paper px-4 py-3 text-sm text-danger">{saveError}</p>
       )}
       <div>
         <button

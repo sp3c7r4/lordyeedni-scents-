@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin, signIn, signOut } from '@/lib/auth';
 import { signParams } from '@/lib/cloudinary';
@@ -46,13 +47,18 @@ function revalidateProduct(slug: string) {
   revalidatePath(`/product/${slug}`);
 }
 
-export async function saveProductAction(formData: FormData): Promise<void> {
+export async function saveProductAction(_previous: string, formData: FormData): Promise<string> {
   await requireAdmin();
-  const id = formData.get('id');
-  const doc = parseProductForm(formData);
-  const savedId = await upsertProduct(doc, id ? Number(id) : undefined);
-  revalidateProduct(doc.slug);
-  redirect(`/admin/products/${savedId}?saved=1`);
+  try {
+    const id = formData.get('id');
+    const doc = parseProductForm(formData);
+    const savedId = await upsertProduct(doc, id ? Number(id) : undefined);
+    revalidateProduct(doc.slug);
+    redirect(`/admin/products/${savedId}?saved=1`);
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    return error instanceof Error ? error.message : 'Could not save the product.';
+  }
 }
 
 export async function deleteProductAction(formData: FormData): Promise<void> {
@@ -62,14 +68,29 @@ export async function deleteProductAction(formData: FormData): Promise<void> {
   redirect('/admin');
 }
 
+/**
+ * Image hosts `next.config.mjs` whitelists for `next/image`. Keep this in step
+ * with `remotePatterns` there - `next/image` refuses any other remote host.
+ */
+const ALLOWED_IMAGE_HOSTS = ['res.cloudinary.com', 'images.unsplash.com'] as const;
+
+const isWhitelistedImage = (src: string) => {
+  try {
+    const url = new URL(src);
+    return url.protocol === 'https:' && (ALLOWED_IMAGE_HOSTS as readonly string[]).includes(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
 function parseProductForm(formData: FormData): Omit<Product, 'id'> {
   const value = (key: string) => String(formData.get(key) ?? '').trim();
   const slug = value('slug').toLowerCase();
   if (!/^[a-z0-9-]+$/.test(slug)) throw new Error('A slug may only contain lowercase letters, numbers and dashes.');
   const images = JSON.parse(value('images') || '[]') as string[];
   if (!Array.isArray(images) || images.length === 0) throw new Error('A product needs at least one image.');
-  if (images.some((src) => !/^https:\/\/res\.cloudinary\.com\//.test(src))) {
-    throw new Error('Images must be Cloudinary URLs.');
+  if (images.some((src) => !isWhitelistedImage(src))) {
+    throw new Error('Images must use a whitelisted host (Cloudinary or Unsplash).');
   }
   const price = Number(formData.get('price'));
   if (!Number.isFinite(price) || price < 0) throw new Error('Price must be a positive number.');

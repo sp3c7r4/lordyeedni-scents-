@@ -46,7 +46,7 @@ non-zero and lists each problem under an `x`. Fix what it names before doing any
 
 It inserts the 12 launch products, creates the unique indexes, and installs the database validators
 described under [Data](#data). Idempotent: re-running it upserts by product `id` and leaves
-`createdAt` alone. Run it once per database. It never touches orders.
+`createdAt` alone. Run it once per database. It never inserts, modifies or deletes order documents.
 
 ## Environment variables
 
@@ -128,10 +128,10 @@ session.
 
 What is behind the password:
 
-- **Products** (`/admin`) - the product list, with a search box, an edit link per product, and
+- **Products** (`/admin`) - the product list, with an edit link per product, and
   delete. `/admin/products/new` creates a product, `/admin/products/[id]` edits one. The editor
   covers name, slug, price, family, gender, line, badge, blurb, the three note groups, the featured
-  flag that drives the home page grid, display-only rating and review count, and the images.
+  flag that drives the home page grid, rating and review count, and the images.
 - **Orders** (`/admin/orders`) - read-only, newest first. Search by order number, customer name or
   email; expand a row for the full item list and the shipping address. There is no status field, no
   editing and no export.
@@ -139,7 +139,7 @@ What is behind the password:
 Two things worth knowing when you add or edit a product:
 
 - **Price is the 50ml price.** 30ml and 100ml are worked out from it automatically (roughly 68% and
-  155% of it, rounded to whole dollars), so there is no second price to type.
+  155% of it, rounded to whole naira), so there is no second price to type.
 - **At least one image is required**, and the first image is the primary one - it is what the
   storefront cards use. Remove the ones you do not want, and use *Make primary* to reorder.
 
@@ -168,8 +168,8 @@ most important fact about this checkout.
 If saving the order fails, the customer stays on `/checkout` with an inline error and never reaches
 the confirmation page - nobody is shown a receipt for an order that was not saved.
 
-Money is whole dollars throughout; there are no cents anywhere. Shipping is free once the discounted
-subtotal reaches `$150`, otherwise `$12`. The promo code `SCENT10` gives 10% off. Both values live in
+Money is whole naira throughout; there are no kobo anywhere. Shipping is free once the discounted
+subtotal reaches `₦150`, otherwise `₦12`. The promo code `SCENT10` gives 10% off. Both values live in
 `lib/catalog.ts`, so changing them or adding another code is a code change and a redeploy, not a
 setting. The totals in the WhatsApp message are what the customer saw on screen, and you confirm them
 in the chat.
