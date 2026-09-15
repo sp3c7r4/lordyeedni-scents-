@@ -41,3 +41,24 @@ export interface Order extends Omit<OrderInput, 'lines'> {
   status: 'new';
   createdAt: Date;
 }
+
+/**
+ * Six random digits. `ponytail:` a random draw can collide; the unique index on
+ * `number` turns a collision into a failed insert rather than a duplicate record.
+ * Move to a counters collection if that ever actually fires.
+ */
+export const mintOrderNumber = (): string => 'LS-' + Math.floor(100000 + Math.random() * 899999);
+
+/** Snapshot each line: an order must still render after the product is renamed or deleted. */
+export const withLineTotals = (lines: OrderLineInput[]): OrderLine[] =>
+  lines.map((line) => ({ ...line, lineTotal: line.unitPrice * line.qty }));
+
+export function buildOrder(input: OrderInput): Order {
+  return {
+    ...input,
+    number: mintOrderNumber(),
+    lines: withLineTotals(input.lines),
+    status: 'new',
+    createdAt: new Date(),
+  };
+}
