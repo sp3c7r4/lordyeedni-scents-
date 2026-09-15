@@ -3,6 +3,7 @@ import ShopView from '@/components/shop/ShopView';
 import { getProducts } from '@/lib/products';
 
 export const metadata = { title: 'All products - Lordyeedni Scents' };
+export const revalidate = 60;
 
 export default async function ProductsPage() {
   const products = await getProducts();
