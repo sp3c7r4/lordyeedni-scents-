@@ -1,12 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { HOUSES, LIFESTYLE } from '@/lib/catalog';
-import { newProducts, popularProducts } from '@/lib/products';
+import { featuredProducts, newProducts } from '@/lib/products';
 import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
 import ProductGrid from '@/components/product/ProductGrid';
 
-export default function HomeView() {
+export default async function HomeView() {
+  const [popular, fresh] = await Promise.all([featuredProducts(), newProducts()]);
   return (
     <>
       {/* Hero: flush-left headline against a full-bleed black-and-white photograph. */}
@@ -70,7 +71,7 @@ export default function HomeView() {
           </div>
           <Link href="/collection" className="ul-reveal label whitespace-nowrap">View all</Link>
         </div>
-        <ProductGrid products={popularProducts()} />
+        <ProductGrid products={popular} />
       </section>
 
       {/* Editorial banners into filtered collection views. */}
@@ -110,7 +111,7 @@ export default function HomeView() {
           </div>
           <Link href="/products" className="ul-reveal label whitespace-nowrap">All products</Link>
         </div>
-        <ProductGrid products={newProducts()} />
+        <ProductGrid products={fresh} />
       </section>
     </>
   );

@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FAMILIES, GENDERS, type Family, type Gender } from '@/lib/catalog';
-import { PRODUCTS } from '@/lib/products';
+import { FAMILIES, GENDERS, type Family, type Gender, type Product } from '@/lib/catalog';
 import { money } from '@/lib/format';
 import Chip from '@/components/ui/Chip';
 import Button from '@/components/ui/Button';
@@ -12,10 +11,9 @@ import ProductCard from '@/components/product/ProductCard';
 type Sort = 'featured' | 'low' | 'high' | 'rated';
 
 /**
- * Client-side filtering over the mock catalogue.
- * When a backend exists, move this to a server component + query params.
+ * Client-side filtering over the catalogue passed from the server page.
  */
-export default function ShopView({ mode }: { mode: 'collection' | 'products' }) {
+export default function ShopView({ mode, products }: { mode: 'collection' | 'products'; products: Product[] }) {
   const params = useSearchParams();
   const [family, setFamily] = useState<Family | 'All'>((params.get('family') as Family) ?? 'All');
   const [gender, setGender] = useState<Gender | 'All'>((params.get('gender') as Gender) ?? 'All');
@@ -24,7 +22,7 @@ export default function ShopView({ mode }: { mode: 'collection' | 'products' }) 
   const [visible, setVisible] = useState(mode === 'products' ? 12 : 8);
 
   const filtered = useMemo(() => {
-    let list = PRODUCTS.filter(
+    let list = products.filter(
       (p) => (family === 'All' || p.family === family) && (gender === 'All' || p.gender === gender) && p.price <= maxPrice,
     );
     if (sort === 'low') list = [...list].sort((a, b) => a.price - b.price);
@@ -32,7 +30,7 @@ export default function ShopView({ mode }: { mode: 'collection' | 'products' }) 
     if (sort === 'rated') list = [...list].sort((a, b) => b.rating - a.rating);
     if (mode === 'products' && sort === 'featured') list = [...list].reverse();
     return list;
-  }, [family, gender, maxPrice, sort, mode]);
+  }, [family, gender, maxPrice, sort, mode, products]);
 
   const shown = filtered.slice(0, visible);
   const reset = () => {
@@ -52,7 +50,7 @@ export default function ShopView({ mode }: { mode: 'collection' | 'products' }) 
         </h1>
         <p className="mt-4 max-w-[52ch] font-editorial text-lg text-copy">
           {mode === 'products'
-            ? 'Twelve compositions, every size and concentration we bottle. Newest first.'
+            ? 'Every composition and concentration we bottle. Newest first.'
             : 'Three house lines - Atelier for the everyday, Bibliotheque for the desk, Reserve for the rare materials.'}
         </p>
       </section>
