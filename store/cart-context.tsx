@@ -3,8 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   FLAT_SHIPPING, FREE_SHIPPING_OVER, PROMO_CODE, PROMO_RATE,
-  getProductById, priceFor, type Product, type Size,
-} from '@/lib/products';
+  priceFor, type Product, type Size,
+} from '@/lib/catalog';
+import { getProductById } from '@/lib/products';
 
 export interface CartLine {
   /** productId + size, unique per row. */

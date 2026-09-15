@@ -83,7 +83,7 @@ export default function SearchOverlay() {
                 className="card-zoom flex items-center gap-4 border-b border-rule py-3.5 text-left"
               >
                 <span className="relative h-[74px] w-[62px] flex-none overflow-hidden bg-stone">
-                  <Image src={p.image} alt="" fill sizes="70px" className="object-cover" />
+                  <Image src={p.images[0]} alt="" fill sizes="70px" className="object-cover" />
                 </span>
                 <span className="flex-1">
                   <span className="block font-editorial text-lg">{p.name}</span>

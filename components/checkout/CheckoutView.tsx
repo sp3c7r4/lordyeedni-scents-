@@ -135,7 +135,7 @@ export default function CheckoutView() {
             return (
               <div key={line.key} className="flex gap-3.5 border-b border-rule py-3">
                 <div className="relative h-[66px] w-14 flex-none overflow-hidden bg-stone">
-                  <Image src={product.image} alt={product.name} fill sizes="60px" className="object-cover" />
+                  <Image src={product.images[0]} alt={product.name} fill sizes="60px" className="object-cover" />
                 </div>
                 <div className="flex-1">
                   <p className="font-editorial text-[15px]">{product.name}</p>

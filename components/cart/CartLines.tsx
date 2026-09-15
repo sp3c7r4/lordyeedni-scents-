@@ -20,7 +20,7 @@ export default function CartLines({ compact, onNavigate }: { compact?: boolean; 
               href={'/product/' + product.slug} onClick={onNavigate}
               className={'relative flex-none overflow-hidden bg-stone ' + (compact ? 'h-[88px] w-[74px]' : 'h-[130px] w-[110px]')}
             >
-              <Image src={product.image} alt={product.name} fill sizes="120px" className="object-cover" />
+              <Image src={product.images[0]} alt={product.name} fill sizes="120px" className="object-cover" />
             </Link>
             <div className="flex flex-1 flex-col gap-1">
               {!compact && <p className="text-[10px] uppercase tracking-label text-quiet">{product.line}</p>}

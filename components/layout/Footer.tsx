@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { SOCIALS } from '@/lib/products';
+import { SOCIALS } from '@/lib/catalog';
 import { useUI } from '@/store/ui-context';
 
 const COLUMNS = [
