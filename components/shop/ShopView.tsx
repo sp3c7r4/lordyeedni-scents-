@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FAMILIES, GENDERS, PRODUCTS, type Family, type Gender } from '@/lib/products';
+import { FAMILIES, GENDERS, type Family, type Gender } from '@/lib/catalog';
+import { PRODUCTS } from '@/lib/products';
 import { money } from '@/lib/format';
 import Chip from '@/components/ui/Chip';
 import Button from '@/components/ui/Button';

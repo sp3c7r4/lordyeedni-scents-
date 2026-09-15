@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { isEmail, money } from '@/lib/format';
-import { lineProduct, useCart } from '@/store/cart-context';
+import { useCart } from '@/store/cart-context';
 import { useUI } from '@/store/ui-context';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
@@ -130,21 +130,18 @@ export default function CheckoutView() {
 
         <aside className="border border-line p-7">
           <h2 className="mb-4 font-display text-2xl font-medium">Order summary</h2>
-          {lines.map((line) => {
-            const product = lineProduct(line);
-            return (
+          {lines.map((line) => (
               <div key={line.key} className="flex gap-3.5 border-b border-rule py-3">
                 <div className="relative h-[66px] w-14 flex-none overflow-hidden bg-stone">
-                  <Image src={product.image} alt={product.name} fill sizes="60px" className="object-cover" />
+                  <Image src={line.image} alt={line.name} fill sizes="60px" className="object-cover" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-editorial text-[15px]">{product.name}</p>
+                  <p className="font-editorial text-[15px]">{line.name}</p>
                   <p className="mt-0.5 text-xs text-muted">{line.size} &times; {line.qty}</p>
                 </div>
                 <p className="text-sm">{money(line.unitPrice * line.qty)}</p>
               </div>
-            );
-          })}
+          ))}
           <div className="flex justify-between pt-3 text-sm"><span className="text-copy">Subtotal</span><span>{money(subtotal)}</span></div>
           <div className="flex justify-between py-2 text-sm"><span className="text-copy">Shipping</span><span>{shipping === 0 ? 'Free' : money(shipping)}</span></div>
           <div className="mt-2.5 flex justify-between border-t border-line pt-4 text-lg">

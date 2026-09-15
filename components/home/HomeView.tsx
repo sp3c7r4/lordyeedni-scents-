@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { HOUSES, LIFESTYLE, newProducts, popularProducts } from '@/lib/products';
+import { HOUSES, LIFESTYLE } from '@/lib/catalog';
+import { newProducts, popularProducts } from '@/lib/products';
 import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
 import ProductGrid from '@/components/product/ProductGrid';

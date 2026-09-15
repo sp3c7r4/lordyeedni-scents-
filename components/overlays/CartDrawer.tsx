@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { money } from '@/lib/format';
-import { FREE_SHIPPING_OVER } from '@/lib/products';
+import { FREE_SHIPPING_OVER } from '@/lib/catalog';
 import { useCart } from '@/store/cart-context';
 import { useUI } from '@/store/ui-context';
 import Icon from '@/components/ui/Icon';

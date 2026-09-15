@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { isEmail } from '@/lib/format';
-import { FAQS, LIFESTYLE } from '@/lib/products';
+import { FAQS, LIFESTYLE } from '@/lib/catalog';
 import { useUI } from '@/store/ui-context';
 import Accordion from '@/components/ui/Accordion';
 import Button from '@/components/ui/Button';

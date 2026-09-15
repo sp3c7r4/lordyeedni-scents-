@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LIFESTYLE, REVIEWS, SIZES, priceFor, type Product, type Size } from '@/lib/products';
+import { REVIEWS, SIZES, priceFor, type Product, type Size } from '@/lib/catalog';
 import { money } from '@/lib/format';
 import { useCart } from '@/store/cart-context';
 import { useUI } from '@/store/ui-context';
@@ -22,7 +22,7 @@ export default function ProductView({ product, related }: { product: Product; re
   const [qty, setQty] = useState(1);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
-  const gallery = [product.image, LIFESTYLE.hero, LIFESTYLE.profile, LIFESTYLE.reserve];
+  const gallery = product.images;
   const unitPrice = priceFor(product, size);
 
   const addToCart = () => {

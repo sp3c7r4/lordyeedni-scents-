@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { LIFESTYLE, VALUES } from '@/lib/products';
+import { LIFESTYLE, VALUES } from '@/lib/catalog';
 import Button from '@/components/ui/Button';
 
 export const metadata = { title: 'Our story - Lordyeedni Scents' };

@@ -3,13 +3,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   FLAT_SHIPPING, FREE_SHIPPING_OVER, PROMO_CODE, PROMO_RATE,
-  getProductById, priceFor, type Product, type Size,
-} from '@/lib/products';
+  priceFor, type Product, type Size,
+} from '@/lib/catalog';
 
 export interface CartLine {
-  /** productId + size, unique per row. */
+  /** productId + '-' + size, unique per row. */
   key: string;
   productId: number;
+  /** Display snapshot, so the cart renders without the catalogue. */
+  slug: string;
+  name: string;
+  image: string;
   size: Size;
   qty: number;
   /** Unit price snapshot, so a price change upstream cannot rewrite a live cart. */
@@ -55,7 +59,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setLines(JSON.parse(raw) as CartLine[]);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as CartLine[];
+      /* Drop lines written before snapshots existed. */
+      setLines(stored.filter((l) => l.key && l.name && l.image && l.slug));
     } catch {
       /* ignore malformed storage */
     }
@@ -74,7 +81,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setLines((current) => {
       const found = current.find((l) => l.key === key);
       if (found) return current.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l));
-      return [...current, { key, productId: product.id, size, qty, unitPrice: priceFor(product, size) }];
+      return [...current, {
+        key, productId: product.id, slug: product.slug, name: product.name,
+        image: product.images[0], size, qty, unitPrice: priceFor(product, size),
+      }];
     });
   }, []);
 
@@ -130,6 +140,3 @@ export function useCart() {
   if (!ctx) throw new Error('useCart must be used inside CartProvider');
   return ctx;
 }
-
-/** Resolve a cart line back to its catalogue product. */
-export const lineProduct = (line: CartLine) => getProductById(line.productId)!;

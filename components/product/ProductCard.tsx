@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { money } from '@/lib/format';
-import type { Product } from '@/lib/products';
+import type { Product } from '@/lib/catalog';
 import { useCart } from '@/store/cart-context';
 import { useUI } from '@/store/ui-context';
 import Icon from '@/components/ui/Icon';
@@ -23,7 +23,7 @@ export default function ProductCard({ product, showRating }: { product: Product;
     <article className="card-zoom flex flex-col bg-paper">
       <Link href={'/product/' + product.slug} className="relative block aspect-[1/1.12] overflow-hidden bg-stone">
         <Image
-          src={product.image}
+          src={product.images[0]}
           alt={product.name + ' eau de parfum bottle'}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
