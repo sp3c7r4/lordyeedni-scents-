@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { money } from '@/lib/format';
-import { searchProducts } from '@/lib/products';
+import { type Product } from '@/lib/catalog';
+import { searchCatalogue } from '@/lib/actions/search';
 import { useUI } from '@/store/ui-context';
 import Icon from '@/components/ui/Icon';
 
@@ -14,24 +15,32 @@ export default function SearchOverlay() {
   const { overlay, closeOverlay } = useUI();
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
+  const [hits, setHits] = useState<Product[]>([]);
   const input = useRef<HTMLInputElement>(null);
 
   /* Debounce so the skeleton state is visible, as a real query would be. */
   useEffect(() => {
-    if (query.trim().length < 2) {
+    const value = query.trim();
+    if (value.length < 2) {
       setBusy(false);
+      setHits([]);
       return;
     }
     setBusy(true);
-    const t = setTimeout(() => setBusy(false), 380);
-    return () => clearTimeout(t);
+    let active = true;
+    const t = setTimeout(async () => {
+      const results = await searchCatalogue(value);
+      if (!active) return;
+      setHits(results);
+      setBusy(false);
+    }, 380);
+    return () => { active = false; clearTimeout(t); };
   }, [query]);
 
   useEffect(() => {
     if (overlay === 'search') input.current?.focus();
   }, [overlay]);
 
-  const hits = useMemo(() => searchProducts(query), [query]);
   if (overlay !== 'search') return null;
   const idle = query.trim().length < 2;
 
