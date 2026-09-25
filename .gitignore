@@ -6,3 +6,7 @@ out
 .DS_Store
 *.tsbuildinfo
 next-env.d.ts
+
+# Local agent and editor tooling - not part of the project
+.pi/
+.mcp.json
