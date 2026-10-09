@@ -24,10 +24,11 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-50 flex h-[76px] items-center justify-between gap-6 border-b border-line bg-paper/95 px-5 backdrop-blur lg:px-10">
         <Link href="/" className="flex items-center">
-          {/* The crown alone is the mark. The full lockup's script 'Scent' is
-              illegible at header size, so it lives in the footer instead, and the
-              alt text carries the name for screen readers. */}
-          <Image src="/logo-mark.webp" alt="Lordyeedni Scents" width={336} height={160} sizes="84px" priority className="h-10 w-auto" />
+          {/* The complete lockup, uncut. Extracting just the crown is not possible:
+              its base rim sits directly on the LORD lettering, so the two are a
+              single fused shape and any slice either loses the crown's base or
+              drags the letter tops in with it. */}
+          <Image src="/logo.webp" alt="Lordyeedni Scents" width={377} height={432} sizes="49px" priority className="h-14 w-auto" />
         </Link>
 
         <nav className="hidden items-center gap-6 xl:flex" aria-label="Main">

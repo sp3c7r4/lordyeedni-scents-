@@ -50,7 +50,7 @@ export default async function HomeView() {
         <div className="relative min-h-[420px] overflow-hidden bg-stone lg:min-h-[620px]">
           <Image
             src={LIFESTYLE.hero} alt="Perfume bottle and its presentation box resting on oud chips" fill priority
-            sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover contrast-[1.06] grayscale"
+            sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover contrast-[1.06]"
           />
         </div>
       </section>
