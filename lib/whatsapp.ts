@@ -22,7 +22,8 @@ export interface MessageOrder {
   promoCode: string | null;
 }
 
-const money = (value: number) => '\u20A6' + Math.round(value);
+const money = (value: number) =>
+  '\u20A6' + Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 /** Plain text, no emoji: the order number is already the header. */
 export function buildOrderMessage(order: MessageOrder): string {

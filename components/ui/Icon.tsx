@@ -1,5 +1,5 @@
 /** Lucide-style stroke icons, inlined so there is no runtime icon dependency. */
-type Name = 'search' | 'cart' | 'user' | 'menu' | 'close' | 'arrow-right' | 'plus' | 'minus';
+type Name = 'search' | 'cart' | 'user' | 'menu' | 'close' | 'arrow-right' | 'plus' | 'minus' | 'star' | 'trash';
 
 const paths: Record<Name, React.ReactNode> = {
   search: (<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></>),
@@ -10,6 +10,8 @@ const paths: Record<Name, React.ReactNode> = {
   'arrow-right': <path d="M5 12h13m0 0-5-5m5 5-5 5" />,
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
+  star: <path d="M12 4.2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.9l5.4-.8L12 4.2Z" />,
+  trash: (<><path d="M4 6.5h16" /><path d="M9.5 6.5V4h5v2.5" /><path d="M6.5 6.5 7.6 20h8.8l1.1-13.5" /></>),
 };
 
 export default function Icon({ name, size = 18, className = '' }: { name: Name; size?: number; className?: string }) {

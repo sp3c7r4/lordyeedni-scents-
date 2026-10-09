@@ -38,8 +38,8 @@ export const SIZES: Size[] = ['30ml', '50ml', '100ml'];
 export const FAMILIES: Family[] = ['Woody', 'Floral', 'Amber', 'Citrus', 'Green', 'Fresh', 'Oriental'];
 export const GENDERS: Gender[] = ['Women', 'Men', 'Unisex'];
 
-/** Free-shipping threshold, in dollars. */
-export const FREE_SHIPPING_OVER = 150;
+/** Free-shipping threshold, in naira. */
+export const FREE_SHIPPING_OVER = 20000;
 export const FLAT_SHIPPING = 12;
 /** The one promo code the mock validator accepts. */
 export const PROMO_CODE = 'SCENT10';

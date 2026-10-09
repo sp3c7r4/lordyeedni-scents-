@@ -32,6 +32,21 @@ test('free shipping renders as Free, not ₦0', () => {
   assert.match(buildOrderMessage({ ...base, shipping: 12, total: 493 }), /Shipping ₦12/);
 });
 
+test('five-figure naira amounts are thousands-separated', () => {
+  // money() lives in two places on purpose - lib/whatsapp.ts and lib/format.ts -
+  // because the test runner cannot resolve the @/ alias. This pins the WhatsApp
+  // copy so the shop's messages cannot drift from the pages.
+  const text = buildOrderMessage({
+    ...base,
+    lines: [{ name: 'Almas Kuwaiti Perfume', size: '50ml', qty: 1, unitPrice: 35000, lineTotal: 35000 }],
+    subtotal: 35000, discount: 3500, shipping: 0, total: 31500, promoCode: 'SCENT10',
+  });
+  assert.match(text, /1\. Almas Kuwaiti Perfume — 50ml x 1 — ₦35,000/);
+  assert.match(text, /Subtotal ₦35,000/);
+  assert.match(text, /Discount SCENT10 -₦3,500/);
+  assert.match(text, /Total ₦31,500/);
+});
+
 test('the discount line appears only when something was discounted', () => {
   assert.ok(!/Discount/.test(buildOrderMessage(base)));
   const text = buildOrderMessage({ ...base, discount: 48, promoCode: 'SCENT10', total: 433 });

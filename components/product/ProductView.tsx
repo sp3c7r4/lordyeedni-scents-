@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { REVIEWS, SIZES, priceFor, type Product, type Size } from '@/lib/catalog';
+import { REVIEWS, SIZES, FREE_SHIPPING_OVER, priceFor, type Product, type Size } from '@/lib/catalog';
 import { money } from '@/lib/format';
 import { useCart } from '@/store/cart-context';
 import { useUI } from '@/store/ui-context';
@@ -102,7 +102,7 @@ export default function ProductView({ product, related }: { product: Product; re
             <Button variant="outline" onClick={buyNow}>Buy now</Button>
           </div>
           <p className="mt-4 text-xs text-muted">
-            Complimentary shipping over ₦150 &middot; 30-day returns &middot; samples with every order
+            Complimentary shipping over {money(FREE_SHIPPING_OVER)} &middot; 30-day returns &middot; samples with every order
           </p>
 
           <div className="mt-9">
@@ -111,7 +111,7 @@ export default function ProductView({ product, related }: { product: Product; re
               items={[
                 { id: 'desc', title: 'Description', body: product.blurb + ' Eau de parfum, 18-22% concentration, blended and bottled in the Lagos atelier.' },
                 { id: 'notes', title: 'Notes', body: 'Top - ' + product.notes.top + '. Heart - ' + product.notes.heart + '. Base - ' + product.notes.base + '.' },
-                { id: 'ship', title: 'Shipping & returns', body: 'Free shipping over ₦150. Dispatched within two working days, tracked. Thirty-day returns, opened or not.' },
+                { id: 'ship', title: 'Shipping & returns', body: `Free shipping over ${money(FREE_SHIPPING_OVER)}. Dispatched within two working days, tracked. Thirty-day returns, opened or not.` },
               ]}
             />
           </div>

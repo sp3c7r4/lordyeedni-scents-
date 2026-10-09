@@ -1,5 +1,8 @@
-/** Money formatter. Whole Naira only, to match the price list. */
-export const money = (value: number) => '\u20A6' + Math.round(value);
+/** Money formatter. Whole Naira only, thousands separated. The regex beats
+ * toLocaleString here: it cannot drift with the runtime's ICU data, so the
+ * server and the client always render the same string. */
+export const money = (value: number) =>
+  '\u20A6' + Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 /** Five-character star string for a 0-5 rating. */
 export const stars = (rating: number) => {
