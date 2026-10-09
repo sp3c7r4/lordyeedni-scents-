@@ -45,7 +45,7 @@ export default function SearchOverlay() {
   const idle = query.trim().length < 2;
 
   return (
-    <div className="fixed inset-0 z-[90] flex animate-fade-in flex-col bg-paper/98" role="dialog" aria-modal="true" aria-label="Search">
+    <div className="fixed inset-0 z-[90] flex animate-fade-in flex-col bg-paper" role="dialog" aria-modal="true" aria-label="Search">
       <div className="flex items-center gap-4 border-b border-line px-5 py-6 lg:px-10">
         <Icon name="search" size={20} className="text-quiet" />
         <input
