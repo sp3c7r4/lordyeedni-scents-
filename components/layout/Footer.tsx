@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { SOCIALS } from '@/lib/catalog';
 import { useUI } from '@/store/ui-context';
 
@@ -26,9 +27,9 @@ export default function Footer() {
     <footer className="bg-ink px-5 pb-8 pt-16 text-paper lg:px-10">
       <div className="grid gap-10 border-b border-[#262322] pb-12 lg:grid-cols-4">
         <div>
-          <p className="mb-4 font-display text-xl uppercase tracking-label">
-            Lordyeedni <span className="italic normal-case tracking-normal">Scents</span>
-          </p>
+          {/* The black letter fills merge into this black footer, leaving the gold
+              outlines and the script 'Scent' - so the full lockup reads best here. */}
+          <Image src="/logo.webp" alt="Lordyeedni Scents" width={377} height={432} sizes="126px" className="mb-5 h-36 w-auto" />
           <p className="mb-6 max-w-[36ch] font-editorial leading-relaxed text-[#a9a4a0]">
             Scent is a sentence. Perfume is the whole library - composed, macerated and bottled by hand.
           </p>

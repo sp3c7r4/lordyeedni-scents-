@@ -52,7 +52,7 @@ export function priceFor(product: Product, size: Size): number {
 
 /** Editorial / lifestyle placeholders, printed in black and white on the site. */
 export const LIFESTYLE = {
-  hero: 'https://images.unsplash.com/photo-1768161680637-630f069f243a?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  hero: '/hero.webp',
   floral: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=1200&q=80',
   men: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=1000&q=80',
   reserve: 'https://images.unsplash.com/photo-1619994403073-2cec844b8e63?w=1000&q=80',

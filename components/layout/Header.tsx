@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/store/cart-context';
 import { useUI } from '@/store/ui-context';
@@ -22,8 +23,11 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 flex h-[76px] items-center justify-between gap-6 border-b border-line bg-paper/95 px-5 backdrop-blur lg:px-10">
-        <Link href="/" className="whitespace-nowrap font-display text-xl uppercase tracking-label">
-          Lordyeedni <span className="italic normal-case tracking-normal">Scents</span>
+        <Link href="/" className="flex items-center">
+          {/* The crown alone is the mark. The full lockup's script 'Scent' is
+              illegible at header size, so it lives in the footer instead, and the
+              alt text carries the name for screen readers. */}
+          <Image src="/logo-mark.webp" alt="Lordyeedni Scents" width={336} height={160} sizes="84px" priority className="h-10 w-auto" />
         </Link>
 
         <nav className="hidden items-center gap-6 xl:flex" aria-label="Main">

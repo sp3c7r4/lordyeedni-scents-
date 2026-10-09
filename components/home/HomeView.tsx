@@ -49,18 +49,26 @@ export default async function HomeView() {
         </div>
         <div className="relative min-h-[420px] overflow-hidden bg-stone lg:min-h-[620px]">
           <Image
-            src={LIFESTYLE.hero} alt="Model holding a perfume bottle against her cheek" fill priority
+            src={LIFESTYLE.hero} alt="Perfume bottle and its presentation box resting on oud chips" fill priority
             sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover contrast-[1.06] grayscale"
           />
         </div>
       </section>
 
-      {/* Trust strip - invented houses, no third-party marks. */}
-      <section className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 border-b border-line px-5 py-8 lg:px-10">
-        <p className="text-[10px] uppercase tracking-label text-quiet">Stocked alongside</p>
-        {HOUSES.map((h) => (
-          <span key={h} className="font-display text-lg tracking-wide text-copy/70">{h}</span>
-        ))}
+      {/* Trust strip - invented houses, no third-party marks. Each name carries its own
+          right margin rather than a flex gap, so the track is exactly two identical
+          halves and the -50% loop closes seamlessly. */}
+      <section className="flex items-center gap-8 border-b border-line py-8">
+        <p className="shrink-0 pl-5 text-[10px] uppercase tracking-label text-quiet lg:pl-10">Stocked alongside</p>
+        <div className="relative flex-1 overflow-hidden">
+          <div className="flex w-max animate-marquee hover:[animation-play-state:paused] motion-reduce:animate-none">
+            {[...HOUSES, ...HOUSES].map((h, i) => (
+              <span key={h + i} aria-hidden={i >= HOUSES.length} className="mr-14 whitespace-nowrap font-display text-lg tracking-wide text-copy/70">{h}</span>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-paper to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-paper to-transparent" />
+        </div>
       </section>
 
       <section className="px-5 py-20 lg:px-10">

@@ -35,6 +35,7 @@ const config: Config = {
         'rise-up': { from: { opacity: '0', transform: 'translateY(14px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         'toast-in': { from: { opacity: '0', transform: 'translateY(20px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         shimmer: { from: { backgroundPosition: '-400px 0' }, to: { backgroundPosition: '400px 0' } },
+        marquee: { from: { transform: 'translateX(0)' }, to: { transform: 'translateX(-50%)' } },
       },
       animation: {
         'slide-in': 'slide-in .32s cubic-bezier(.2,.8,.2,1) both',
@@ -42,6 +43,7 @@ const config: Config = {
         'rise-up': 'rise-up .3s cubic-bezier(.2,.8,.2,1) both',
         'toast-in': 'toast-in .3s cubic-bezier(.2,.8,.2,1) both',
         shimmer: 'shimmer 1.2s linear infinite',
+        marquee: 'marquee 40s linear infinite',
       },
     },
   },
