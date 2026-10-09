@@ -17,26 +17,48 @@ export default function ShopView({ mode, products }: { mode: 'collection' | 'pro
   const params = useSearchParams();
   const [family, setFamily] = useState<Family | 'All'>((params.get('family') as Family) ?? 'All');
   const [gender, setGender] = useState<Gender | 'All'>((params.get('gender') as Gender) ?? 'All');
-  const [maxPrice, setMaxPrice] = useState(220);
   const [sort, setSort] = useState<Sort>((params.get('sort') as Sort) ?? 'featured');
   const [visible, setVisible] = useState(mode === 'products' ? 12 : 8);
 
+  /* Price bounds are read off the catalogue rather than fixed. The old 60-220
+   * range was written when the price list was a different order of magnitude,
+   * and it silently discarded every product once prices moved to naira.
+   * maxPrice === null means "no cap", so the shelf is never filtered on load. */
+  const { floor, ceiling, step, top } = useMemo(() => {
+    if (products.length === 0) return { floor: 0, ceiling: 0, step: 1, top: 0 };
+    const prices = products.map((p) => p.price);
+    const high = Math.max(...prices);
+    const low = Math.min(...prices);
+    // One product (or none) would give a slider with no travel, so open it up from zero.
+    const floor = low === high ? 0 : low;
+    const raw = Math.max(1, (high - floor) / 40);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = Math.max(1, Math.round(raw / magnitude) * magnitude);
+    // Round the slider's top up to a whole step. A step that does not divide the
+    // range leaves the ceiling unreachable, so the dearest product would drop out
+    // of the grid the moment the slider was nudged.
+    return { floor, ceiling: high, step, top: floor + Math.ceil((high - floor) / step) * step };
+  }, [products]);
+
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const cap = maxPrice ?? top;
+
   const filtered = useMemo(() => {
     let list = products.filter(
-      (p) => (family === 'All' || p.family === family) && (gender === 'All' || p.gender === gender) && p.price <= maxPrice,
+      (p) => (family === 'All' || p.family === family) && (gender === 'All' || p.gender === gender) && p.price <= cap,
     );
     if (sort === 'low') list = [...list].sort((a, b) => a.price - b.price);
     if (sort === 'high') list = [...list].sort((a, b) => b.price - a.price);
     if (sort === 'rated') list = [...list].sort((a, b) => b.rating - a.rating);
     if (mode === 'products' && sort === 'featured') list = [...list].reverse();
     return list;
-  }, [family, gender, maxPrice, sort, mode, products]);
+  }, [family, gender, cap, sort, mode, products]);
 
   const shown = filtered.slice(0, visible);
   const reset = () => {
     setFamily('All');
     setGender('All');
-    setMaxPrice(220);
+    setMaxPrice(null);
     setSort('featured');
     setVisible(mode === 'products' ? 12 : 8);
   };
@@ -72,9 +94,9 @@ export default function ShopView({ mode, products }: { mode: 'collection' | 'pro
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] uppercase tracking-label text-quiet">Under {money(maxPrice)}</span>
+          <span className="text-[10px] uppercase tracking-label text-quiet">Under {money(Math.min(cap, ceiling))}</span>
           <input
-            type="range" min={60} max={220} step={5} value={maxPrice}
+            type="range" min={floor} max={top} step={step} value={cap}
             onChange={(e) => setMaxPrice(Number(e.target.value))}
             aria-label="Maximum price" className="w-32 accent-accent"
           />

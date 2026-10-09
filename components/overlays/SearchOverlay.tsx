@@ -48,10 +48,13 @@ export default function SearchOverlay() {
     <div className="fixed inset-0 z-[90] flex animate-fade-in flex-col bg-paper" role="dialog" aria-modal="true" aria-label="Search">
       <div className="flex items-center gap-4 border-b border-line px-5 py-6 lg:px-10">
         <Icon name="search" size={20} className="text-quiet" />
+        {/* focus-visible rather than a bare outline-none: the global focus rule in
+            globals.css targets `input:focus-visible` at specificity (0,1,1), which
+            outranks a plain utility at (0,1,0). The caret is the focus cue here. */}
         <input
           ref={input} value={query} onChange={(e) => setQuery(e.target.value)}
           placeholder="Search scents, families, notes..." aria-label="Search"
-          className="h-13 flex-1 bg-transparent font-display text-[clamp(22px,3vw,34px)] outline-none"
+          className="h-13 flex-1 bg-transparent font-display text-[clamp(22px,3vw,34px)] focus-visible:outline-none"
         />
         <button type="button" onClick={closeOverlay} className="ul-reveal label">Close</button>
       </div>
